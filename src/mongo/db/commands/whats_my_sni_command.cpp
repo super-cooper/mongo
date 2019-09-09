@@ -50,7 +50,7 @@ public:
              BSONObjBuilder& result) override {
         auto sniName = opCtx->getClient()->getSniNameForSession();
         // if no SNI name is advertised, output is false
-        if (!sniName) {
+        if (!sniName || sniName->empty()) {
             result.append("sni", false);
         } else {
             result.append("sni", *sniName);

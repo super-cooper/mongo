@@ -1073,13 +1073,13 @@ boost::optional<std::string> getRawSNIServerName(::SSLContextRef _ssl) {
         return boost::none;
     }
     std::string ret;
-    ret.resize(len + 1);
+    ret.resize(len);
     status = ::SSLCopyRequestedPeerName(_ssl, &ret[0], &len);
     if (status != ::errSecSuccess) {
         return boost::none;
     }
-    ret.resize(len);
-
+    // ::SSLCopyRequestedPeerName includes space for a null byte at the string it writes
+    // we do not want to include this null byte in the advertised SNI name
     while (!ret.empty() && ret.back() == '\0') {
         ret.pop_back();
     }
@@ -1116,8 +1116,10 @@ public:
         uassertOSStatusOK(::SSLSetProtocolVersionMax(_ssl.get(), ctx->protoMax));
 
         std::array<uint8_t, INET6_ADDRSTRLEN> unusedBuf;
+        warning() << "GABABO " << hostname;
         if (!hostname.empty() && (inet_pton(AF_INET, hostname.c_str(), unusedBuf.data()) == 0) &&
             (inet_pton(AF_INET6, hostname.c_str(), unusedBuf.data()) == 0)) {
+            warning() << "BALAHOOEY " << hostname;
             uassertOSStatusOK(
                 ::SSLSetPeerDomainName(_ssl.get(), hostname.c_str(), hostname.size()));
         }

@@ -1075,6 +1075,7 @@ boost::optional<std::string> getRawSNIServerName(::SSLContextRef _ssl) {
     std::string ret;
     ret.resize(len);
     status = ::SSLCopyRequestedPeerName(_ssl, &ret[0], &len);
+    warning() << "BILIBILI " << ret;
     if (status != ::errSecSuccess) {
         return boost::none;
     }
@@ -1083,6 +1084,8 @@ boost::optional<std::string> getRawSNIServerName(::SSLContextRef _ssl) {
     while (!ret.empty() && ret.back() == '\0') {
         ret.pop_back();
     }
+
+    warning() << "BOBOBOBOB " << ret;
 
     return ret;
 }

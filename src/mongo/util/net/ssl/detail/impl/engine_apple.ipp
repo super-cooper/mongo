@@ -41,6 +41,7 @@
 
 #include <arpa/inet.h>
 
+#include "mongo/util/debugger.h"
 #include "mongo/util/log.h"
 #include "mongo/util/net/ssl/apple.hpp"
 #include "mongo/util/net/ssl/detail/engine.hpp"
@@ -190,6 +191,9 @@ bool engine::_initSSL(stream_base::handshake_type type, asio::error_code& ec) {
     }
 
     mongo::warning() << "JEJEJEJE " << _remoteHostName;
+    if (_remoteHostName.empty()) {
+        breakpoint();
+    }
     if (!_remoteHostName.empty() && (status == ::errSecSuccess)) {
         mongo::warning() << "JOJOJOJOJO " << _remoteHostName;
         error_code ec;

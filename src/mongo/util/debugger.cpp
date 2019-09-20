@@ -39,6 +39,11 @@
 #include <unistd.h>
 #endif
 
+#if defined(USE_LLDB_SERVER)
+#include <cstdio>
+#include <unistd.h>
+#endif
+
 #ifndef _WIN32
 #include <signal.h>
 #endif

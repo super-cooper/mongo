@@ -165,7 +165,7 @@ void launchLLDB(int) {
 }
 
 void setupSIGTRAPforGDB() {
-    if (!(signal(SIGTRAP, launchGDB) != SIG_ERR)) {
+    if (!(signal(SIGTRAP, launchLLDB) != SIG_ERR)) {
         std::abort();
     }
 }

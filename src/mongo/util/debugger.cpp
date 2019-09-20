@@ -162,6 +162,11 @@ void launchLLDB(int) {
         raise(SIGSTOP);  // pause all threads until lldb connects and continues
         raise(SIGTRAP);  // break inside debugserver
     }
+
+    void setupSIGTRAPforGDB() {
+    if (!(signal(SIGTRAP, launchGDB) != SIG_ERR)) {
+        std::abort();
+    }
 }
 
 #else

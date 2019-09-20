@@ -120,7 +120,7 @@ void setupSIGTRAPforGDB() {
         std::abort();
 }
 
-#elif __APPLE__
+#elif defined(USE_LLDB_SERVER)
 
 void launchLLDB(int) {
     // Don't come back here

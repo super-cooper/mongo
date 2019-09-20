@@ -39,6 +39,11 @@
 #include <unistd.h>
 #endif
 
+#if defined(USE_LLDB_SERVER)
+#include <cstdio>
+#include <unistd.h>
+#endif
+
 #ifndef _WIN32
 #include <signal.h>
 #endif
@@ -119,6 +124,52 @@ void setupSIGTRAPforGDB() {
     if (!(signal(SIGTRAP, launchGDB) != SIG_ERR))
         std::abort();
 }
+
+#elif defined(USE_LLDB_SERVER)
+
+void launchLLDB(int) {
+    // Don't come back here
+    signal(SIGTRAP, SIG_IGN);
+
+    char pidToDebug[16];
+    int pidRet = snprintf(pidToDebug, sizeof(pidToDebug), "%d", getpid());
+    if (!(pidRet >= 0 && size_t(pidRet) < sizeof(pidToDebug)))
+        std::abort();
+
+    char msg[128];
+    int msgRet = snprintf(
+        msg, sizeof(msg), "\n\n\t**** Launching LLDB server (use lsof to find port) ****\n\n");
+    if (!(msgRet >= 0 && size_t(msgRet) < sizeof(msg)))
+        std::abort();
+
+    if (!(write(STDERR_FILENO, msg, msgRet) == msgRet))
+        std::abort();
+
+    if (fork() == 0) {
+        // child
+        execlp(
+            "/Users/adam/Downloads/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/"
+            "Resources/debugserver",
+            "debugserver",
+            "*:12345",
+            "--attach",
+            pidToDebug,
+            nullptr);
+        perror(nullptr);
+        _exit(1);
+    } else {
+        // parent
+        raise(SIGSTOP);  // pause all threads until lldb connects and continues
+        raise(SIGTRAP);  // break inside debugserver
+    }
+}
+
+void setupSIGTRAPforGDB() {
+    if (!(signal(SIGTRAP, launchLLDB) != SIG_ERR)) {
+        std::abort();
+    }
+}
+
 #else
 void setupSIGTRAPforGDB() {}
 #endif

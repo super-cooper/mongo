@@ -196,7 +196,7 @@ bool engine::_initSSL(stream_base::handshake_type type, asio::error_code& ec) {
         mongo::warning() << "SERVER CONNECTION SSL";
     }
     mongo::warning() << "JEJEJEJE " << _remoteHostName;
-    if (!_remoteHostName.empty() && (status == ::errSecSuccess)) {
+    if (!_remoteHostName.empty() && (status == ::errSecSuccess) && (type != stream_base::server)) {
         error_code ec;
         ip::make_address(_remoteHostName, ec);
         if (ec) {

@@ -190,12 +190,13 @@ bool engine::_initSSL(stream_base::handshake_type type, asio::error_code& ec) {
         status = ::SSLSetSessionOption(_ssl.get(), ::kSSLSessionOptionBreakOnClientAuth, true);
     }
 
-    mongo::warning() << "JEJEJEJE " << _remoteHostName;
-    if (_remoteHostName.empty()) {
-        mongo::breakpoint();
+    if (type == stream_base::client) {
+        mongo::warning() << "CLIENT CONNECTION SSL";
+    } else if (type == stream_base::server) {
+        mongo::warning() << "SERVER CONNECTION SSL";
     }
+    mongo::warning() << "JEJEJEJE " << _remoteHostName;
     if (!_remoteHostName.empty() && (status == ::errSecSuccess)) {
-        mongo::warning() << "JOJOJOJOJO " << _remoteHostName;
         error_code ec;
         ip::make_address(_remoteHostName, ec);
         if (ec) {

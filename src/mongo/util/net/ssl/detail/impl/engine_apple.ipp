@@ -39,10 +39,9 @@
 #include "asio/error.hpp"
 #include "asio/ip/address.hpp"
 
-#include "yaml-cpp/binary.h"
-
 #include <arpa/inet.h>
 
+#include "mongo/util/base64.h"
 #include "mongo/util/debugger.h"
 #include "mongo/util/log.h"
 #include "mongo/util/net/ssl/apple.hpp"
@@ -196,8 +195,7 @@ bool engine::_initSSL(stream_base::handshake_type type, asio::error_code& ec) {
         mongo::warning() << "CLIENT CONNECTION SSL";
     } else if (type == stream_base::server) {
         mongo::warning() << "SERVER CONNECTION SSL";
-        mongo::warning() << "SNI NAME BASE64: "
-                         << YAML::EncodeBase64(_remoteHostName.c_str(), _remoteHostName.size());
+        mongo::warning() << "SNI NAME BASE64: " << mongo::base64::encode(_remoteHostName);
     }
     mongo::warning() << "JEJEJEJE " << _remoteHostName;
     if (!_remoteHostName.empty() && (status == ::errSecSuccess) && (type != stream_base::server)) {

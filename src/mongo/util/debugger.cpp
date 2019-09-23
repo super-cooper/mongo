@@ -148,8 +148,8 @@ void launchLLDB(int) {
     if (fork() == 0) {
         // child
         execlp(
-            "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/"
-            "debugserver",
+            "/Users/adam/Downloads/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/"
+            "Resources/debugserver",
             "debugserver",
             "*:12345",
             "--attach",

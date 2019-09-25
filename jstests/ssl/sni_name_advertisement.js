@@ -50,11 +50,9 @@ function getSNISharded(params) {
     let db = s.getDB("admin");
 
     // sort of have to fish out the value from deep within the output of multicast
-    const multicastData =
-        assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}));
+    const multicastData = assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}));
     const hostName = Object.keys(multicastData.hosts)[0];
     const sni = multicastData[hostName]["data"]["sni"];
-    print(multicastData);
 
     s.stop();
 
@@ -63,15 +61,21 @@ function getSNISharded(params) {
 
 // TODO SERVER-41045 remove if-statement once SNI is supported on Windows
 if (!_isWindows()) {
-    jsTestLog("Testing mongod bound to URL " + testURL);
-    assert.eq(testURL, getSNI(urlParams), "URL host is not advertised as SNI name in basic mongod");
+    jsTestLog("Testing mongod bound to host " + testURL);
+    assert.eq(testURL, getSNI(urlParams), "Hostname is not advertised as SNI name in basic mongod");
+    jsTestLog("Testing sharded configuration bound to host " + testURL);
     assert.eq(testURL,
               getSNISharded(urlParams),
-              "URL host is not advertised as SNI name in sharded mongod");
+              "Hostname is not advertised as SNI name in sharded mongod");
 
+    // apple's TLS stack does not allow us to selectively remove SNI names, so IP addresses are
+    // still advertised
+    const desiredOutput = determineSSLProvider() === "apple" ? testIP : false;
     jsTestLog("Testing mongod bound to IP " + testIP);
-    assert.eq(false, getSNI(ipParams), "IP host is advertised as SNI name in basic mongod");
     assert.eq(
-        false, getSNISharded(ipParams), "IP host is advertised as SNI name in sharded mongod");
+        desiredOutput, getSNI(ipParams), "IP address is advertised as SNI name in basic mongod");
+    assert.eq(desiredOutput,
+              getSNISharded(ipParams),
+              "IP address is advertised as SNI name in sharded mongod");
 }
 })();

@@ -4,6 +4,7 @@
 
 (function() {
 'use strict';
+load('jstests/ssl/libs/ssl_helpers.js');
 
 let path = "jstests/libs/";
 let pemKeyFile = path + "server.pem";
@@ -22,7 +23,7 @@ let params = {
 /* we will have two test server configurations: one that is bound to a URL, and one that is bound to
  * an IP address
  * The bind_ip here is only to confirm that mongod and the shell are on the same page. bind_ip is
- * not what is used for testing SNI advertisement. That is the IP address supplied to the shell. */
+ * not what is used for testing SNI advertisement. That is the name supplied to the shell. */
 let ipParams = Object.merge(params, {bind_ip: testIP});
 let urlParams = params;
 
@@ -50,8 +51,8 @@ function getSNISharded(params) {
     let db = s.getDB("admin");
 
     // sort of have to fish out the value from deep within the output of multicast
-    const multicastData = assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}));
-    const hostName = Object.keys(multicastData.hosts)[0];
+    const multicastData = assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}))["hosts"];
+    const hostName = Object.keys(multicastData)[0];
     const sni = multicastData[hostName]["data"]["sni"];
 
     s.stop();
@@ -74,6 +75,7 @@ if (!_isWindows()) {
     jsTestLog("Testing mongod bound to IP " + testIP);
     assert.eq(
         desiredOutput, getSNI(ipParams), "IP address is advertised as SNI name in basic mongod");
+    jsTestLog("Testing sharded configuration bound to IP " + testIP);
     assert.eq(desiredOutput,
               getSNISharded(ipParams),
               "IP address is advertised as SNI name in sharded mongod");

@@ -1073,17 +1073,14 @@ boost::optional<std::string> getRawSNIServerName(::SSLContextRef _ssl) {
     std::string ret;
     ret.resize(len);
     status = ::SSLCopyRequestedPeerName(_ssl, &ret[0], &len);
-    warning() << "BILIBILI " << ret;
     if (status != ::errSecSuccess) {
         return boost::none;
     }
-    // ::SSLCopyRequestedPeerName includes space for a null byte at the string it writes
-    // we do not want to include this null byte in the advertised SNI name
+    // ::SSLCopyRequestedPeerName includes space for a null byte at the end of the string it writes.
+    // We do not want to include this null byte in the advertised SNI name
     while (!ret.empty() && ret.back() == '\0') {
         ret.pop_back();
     }
-
-    warning() << "BOBOBOBOB " << ret;
 
     return ret;
 }

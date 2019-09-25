@@ -55,8 +55,6 @@
 #include "mongo/util/net/ssl_options.h"
 #include "mongo/util/net/ssl_parameters_gen.h"
 
-#include <arpa/inet.h>
-
 using asio::ssl::apple::CFUniquePtr;
 
 /* This API appears in the Security framework even though
@@ -1118,11 +1116,7 @@ public:
         uassertOSStatusOK(::SSLSetProtocolVersionMin(_ssl.get(), ctx->protoMin));
         uassertOSStatusOK(::SSLSetProtocolVersionMax(_ssl.get(), ctx->protoMax));
 
-        std::array<uint8_t, INET6_ADDRSTRLEN> unusedBuf;
-        warning() << "GABABO " << hostname;
-        if (!hostname.empty() && (inet_pton(AF_INET, hostname.c_str(), unusedBuf.data()) == 0) &&
-            (inet_pton(AF_INET6, hostname.c_str(), unusedBuf.data()) == 0)) {
-            warning() << "BALAHOOEY " << hostname;
+        if (!hostname.empty()) {
             uassertOSStatusOK(
                 ::SSLSetPeerDomainName(_ssl.get(), hostname.c_str(), hostname.size()));
         }

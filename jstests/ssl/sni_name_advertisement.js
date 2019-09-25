@@ -51,9 +51,10 @@ function getSNISharded(params) {
 
     // sort of have to fish out the value from deep within the output of multicast
     const multicastData =
-        assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}))["hosts"];
-    const hostName = Object.keys(multicastData)[0];
+        assert.commandWorked(db.runCommand({multicast: {whatsmysni: 1}}));
+    const hostName = Object.keys(multicastData.hosts)[0];
     const sni = multicastData[hostName]["data"]["sni"];
+    print(multicastData);
 
     s.stop();
 

@@ -37,9 +37,6 @@
 #include "asio/detail/push_options.hpp"
 #include "asio/detail/throw_error.hpp"
 #include "asio/error.hpp"
-#include "asio/ip/address.hpp"
-
-#include <arpa/inet.h>
 
 #include "mongo/util/base64.h"
 #include "mongo/util/debugger.h"
@@ -135,7 +132,6 @@ engine::engine(context::native_handle_type context, const std::string& remoteHos
         _protoMin = context->protoMin;
         _protoMax = context->protoMax;
         if (context->allowInvalidHostnames) {
-            mongo::warning() << "ALLOW INVALID HOSTNAMES: " << _remoteHostName;
             _remoteHostName.clear();
         }
     } else {
@@ -192,20 +188,9 @@ bool engine::_initSSL(stream_base::handshake_type type, asio::error_code& ec) {
         status = ::SSLSetSessionOption(_ssl.get(), ::kSSLSessionOptionBreakOnClientAuth, true);
     }
 
-    if (type == stream_base::client) {
-        mongo::warning() << "CLIENT CONNECTION SSL";
-    } else if (type == stream_base::server) {
-        mongo::warning() << "SERVER CONNECTION SSL";
-        mongo::warning() << "SNI NAME BASE64: " << mongo::base64::encode(_remoteHostName);
-    }
-    mongo::warning() << "JEJEJEJE " << _remoteHostName;
-    if (!_remoteHostName.empty() && (status == ::errSecSuccess) && (type != stream_base::server)) {
-        error_code ec;
-        ip::make_address(_remoteHostName, ec);
-        if (ec) {
-            status =
-                ::SSLSetPeerDomainName(_ssl.get(), _remoteHostName.c_str(), _remoteHostName.size());
-        }
+    if (!_remoteHostName.empty() && (status == ::errSecSuccess)) {
+        status =
+            ::SSLSetPeerDomainName(_ssl.get(), _remoteHostName.c_str(), _remoteHostName.size());
     }
 
     if (status != ::errSecSuccess) {

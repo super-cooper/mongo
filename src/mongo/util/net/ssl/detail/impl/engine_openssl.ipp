@@ -211,7 +211,6 @@ int engine::do_accept(void*, std::size_t) {
 }
 
 int engine::do_connect(void*, std::size_t) {
-    std::cout << "JOOJOJOJ " << _remoteHostName << std::endl;
     if (!_remoteHostName.empty()) {
         error_code ec;
         ip::make_address(_remoteHostName, ec);

@@ -17,7 +17,7 @@ let params = {
     tlsCAFile: caFile,
     tlsMode: "preferTLS",
     bind_ip: testURL,
-    tlsAllowInvalidHostnames: ""
+    tlsAllowInvalidCertificates: ""
 };
 
 /* we will have two test server configurations: one that is bound to a URL, and one that is bound to
@@ -72,13 +72,15 @@ if (!_isWindows()) {
 
     // apple's TLS stack does not allow us to selectively remove SNI names, so IP addresses are
     // still advertised
-    const desiredOutput = determineSSLProvider() === "apple" ? testIP : false;
-    jsTestLog("Testing mongod bound to IP " + testIP);
-    assert.eq(
-        desiredOutput, getSNI(ipParams), "IP address is advertised as SNI name in basic mongod");
-    jsTestLog("Testing sharded configuration bound to IP " + testIP);
-    assert.eq(desiredOutput,
-              getSNISharded(ipParams),
-              "IP address is advertised as SNI name in sharded mongod");
+    if (determineSSLProvider() !== "apple") {
+        jsTestLog("Testing mongod bound to IP " + testIP);
+        assert.eq(desiredOutput,
+                  getSNI(ipParams),
+                  "IP address is advertised as SNI name in basic mongod");
+        jsTestLog("Testing sharded configuration bound to IP " + testIP);
+        assert.eq(desiredOutput,
+                  getSNISharded(ipParams),
+                  "IP address is advertised as SNI name in sharded mongod");
+    }
 }
 })();

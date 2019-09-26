@@ -1312,7 +1312,6 @@ SSLConnectionInterface* SSLManagerOpenSSL::connect(Socket* socket) {
     const auto undotted = removeFQDNRoot(socket->remoteAddr().hostOrIp());
 
     int ret;
-    warning() << "MAWAWAWAWA " << undotted;
     if (!undotted.empty()) {
         // only have TLS advertise host name as SNI if it is not an IP address
         std::array<uint8_t, INET6_ADDRSTRLEN> unusedBuf;

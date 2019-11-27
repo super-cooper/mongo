@@ -295,7 +295,7 @@ function sslProviderSupportsTLS1_0() {
         const cryptoPolicy = cat("/etc/crypto-policies/config");
         return cryptoPolicy.includes("LEGACY");
     }
-    return isDebian10();
+    return !isDebian10();
 }
 
 function sslProviderSupportsTLS1_1() {

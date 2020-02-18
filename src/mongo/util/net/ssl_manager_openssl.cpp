@@ -76,6 +76,7 @@
 #include <openssl/asn1t.h>
 #include <openssl/dh.h>
 #include <openssl/evp.h>
+#include <openssl/obj_mac.h>
 #include <openssl/ocsp.h>
 #include <openssl/ssl.h>
 #include <openssl/x509_vfy.h>
@@ -1443,10 +1444,39 @@ Future<void> ocspClientVerification(SSL* ssl) {
     const unsigned char* response_ptr = NULL;
     long length = SSL_get_tlsext_status_ocsp_resp(ssl, &response_ptr);
 
+    // check for MustStaple feature
+    bool mustStaple = false;
+    // the TLS Feature extension (MustStaple) was first released with OpenSSL 1.1.0
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    int tlsFeatureNID = NID_tlsfeature;
+#else
+    ASN1OID tlsFeatureOID("1.3.6.1.5.5.7.1.24", "tlsfeature", "TLS Feature");
+    int tlsFeatureNID = OBJ_create(tlsFeatureOID.identifier.c_str(),
+                                   tlsFeatureOID.shortDescription.c_str(),
+                                   tlsFeatureOID.longDescription.c_str());
+#endif
+    auto featureExt = static_cast<STACK_OF(ASN1_INTEGER)*>(
+        X509_get_ext_d2i(peerCert.get(), tlsFeatureNID, nullptr, nullptr));
+    if (featureExt != nullptr) {
+        int nExtensions = sk_ASN1_INTEGER_num(featureExt);
+        for (int i = 0; (i < nExtensions) && !mustStaple; i++) {
+            auto featureID = ASN1_INTEGER_get(sk_ASN1_INTEGER_value(featureExt, i));
+            // if certificate has MustStaple
+            if (featureID == TLSEXT_TYPE_status_request) {
+                mustStaple = true;
+            }
+        }
+    }
+
     // If we see that we had a OCSP response, we can assume that it passed the callback
     // verification, so we can bypass other verification.
     if (length > 0) {
         return Status::OK();
+    } else if (mustStaple) {
+        // mustStaple means the peer cert has to have a stapled response.
+        // If length is 0, then there is no stapled response. This is bad.
+        return Status(ErrorCodes::InvalidSSLConfiguration,
+                      "Peer certificate requires a stapled OCSP response, but none were provided.");
     }
 
     if (!getSSLGlobalParams().sslCRLFile.empty()) {

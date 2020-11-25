@@ -38,6 +38,7 @@ enums:
         type: string
         values:
             aws: "aws"
+            gcp: "gcp"
             local: "local"
 
 structs:
@@ -63,6 +64,24 @@ structs:
             type: string
             optional: true
 
+    gcpKMSError:
+        description: "GCP KMS Error"
+        strict: false
+        fields:
+          code: int
+          message: string
+          status: string
+
+    # Options passed to Mongo() javascript constructor
+    gcpKMS:
+        description: "GCP KMS config"
+        fields:
+          email: string
+          endpoint:
+            type: string
+            optional: true
+          privateKey: string
+
     # Options passed to Mongo() javascript constructor
     localKMS:
         description: "Local KMS config"
@@ -76,6 +95,9 @@ structs:
         aws:
           type: awsKMS
           optional: true
+        gcp:
+            type: gcpKMS
+            optional: true
         local:
           type: localKMS
           optional: true
@@ -136,6 +158,55 @@ structs:
             type: bindata_generic
           masterKey:
             type: awsMasterKey
+
+    gcpEncryptResponse:
+        description: "Response from GCP KMS Encrypt request"
+        strict: false
+        fields:
+            name:
+                type: string
+            ciphertext:
+                type: string
+            ciphertextCrc32c:
+                type: string
+
+    gcpDecryptResponse:
+        description: "Response from GCP KMS Decrypt request"
+        strict: false
+        fields:
+            plaintext:
+                type: string
+            plaintextCrc32c:
+                type: string
+
+    gcpMasterKey:
+        description: "AWS KMS Key Store Description"
+        fields:
+            provider:
+                type: string
+                default: '"gcp"'
+            key:
+                type: string
+            keyRing:
+                type: string
+            keyVersion:
+                type: string
+                optional: true
+            locationID:
+                type: string
+            projectID:
+                type: string
+            endpoint:
+                type: string
+                optional: true
+
+    gcpMasterKeyAndMaterial:
+        description: "GCP KMS Key Material Description"
+        fields:
+            keyMaterial:
+                type: bindata_generic
+            masterKey:
+                type: gcpMasterKey
 
     localMasterKey:
         description: "Local KMS Key Store Description"

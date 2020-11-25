@@ -117,6 +117,26 @@ void getSSLParamsForNetworkKMS(SSLParams* params) {
         std::vector({SSLParams::Protocols::TLS1_0, SSLParams::Protocols::TLS1_1});
 }
 
+std::vector<uint8_t> kmsResponseToVector(const std::string& str) {
+    std::vector<uint8_t> blob;
+
+    std::transform(std::begin(str), std::end(str), std::back_inserter(blob), [](auto c) {
+        return static_cast<uint8_t>(c);
+    });
+
+    return blob;
+}
+
+SecureVector<uint8_t> kmsResponseToSecureVector(const std::string& str) {
+    SecureVector<uint8_t> blob(str.length());
+
+    std::transform(std::begin(str), std::end(str), blob->data(), [](auto c) {
+        return static_cast<uint8_t>(c);
+    });
+
+    return blob;
+}
+
 StringData KMSOAuthService::getBearerToken() {
 
     if (!_cachedToken.empty() && _expirationDateTime > Date_t::now()) {

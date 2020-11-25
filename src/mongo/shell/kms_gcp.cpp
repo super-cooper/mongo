@@ -31,6 +31,7 @@
 
 #include "mongo/platform/basic.h"
 
+#include <fmt/format.h>
 #include <kms_message/kms_b64.h>
 #include <kms_message/kms_gcp_request.h>
 #include <kms_message/kms_message.h>
@@ -44,38 +45,19 @@
 namespace mongo {
 namespace {
 
+using namespace fmt::literals;
+
 // Default endpoints for GCP
 static constexpr StringData defaultOauthEndpoint = "oauth2.googleapis.com"_sd;
 static constexpr StringData defaultOauthScope = "https://www.googleapis.com/auth/cloudkms"_sd;
 static constexpr StringData gcpKMSEndpoint = "https://cloudkms.googleapis.com:443"_sd;
 
 // Field names for BSON objects containing key vault information
-static constexpr StringData kProjectIdField = "projectID"_sd;
-static constexpr StringData kLocationIdField = "locationID"_sd;
+static constexpr StringData kProjectIdField = "projectId"_sd;
+static constexpr StringData kLocationIdField = "location"_sd;
 static constexpr StringData kKeyRingField = "keyRing"_sd;
-static constexpr StringData kKeyNameField = "key"_sd;
+static constexpr StringData kKeyNameField = "keyName"_sd;
 static constexpr StringData kKeyVerisionField = "keyVersion"_sd;
-
-class UniqueBytes {
-public:
-    ~UniqueBytes() {
-        std::free((void*)_bytes);
-    }
-    UniqueBytes(const uint8_t* bytes) : _bytes(bytes) {}
-    UniqueBytes& operator=(UniqueBytes) = delete;
-    UniqueBytes& operator=(UniqueBytes&&) = delete;
-    UniqueBytes(UniqueBytes&) = delete;
-    UniqueBytes(UniqueBytes&&) = delete;
-    const uint8_t* get() const {
-        return _bytes;
-    }
-    const uint8_t** getPtr() {
-        return &_bytes;
-    }
-
-private:
-    const uint8_t* _bytes;
-};
 
 /**
  * GCP configuration settings
@@ -112,31 +94,22 @@ public:
 
 protected:
     UniqueKmsRequest getOAuthRequest() {
-        std::string audience = str::stream() << "https://" << _oAuthEndpoint.host() << "/token";
+        std::string audience = "https://{}/token"_format(_oAuthEndpoint.host());
         std::string scope;
         if (_oAuthEndpoint.host() != defaultOauthEndpoint.toString()) {
-            // TODO Scope is supposed to derive from a KMS endpoint as opposed to OAuth. Where could
-            // I derive that from in this function?
-            scope = str::stream() << "https://www." << _oAuthEndpoint.host() << "/auth/cloudkms";
+            scope = "https://www.{}/auth/cloudkms"_format(_oAuthEndpoint.host());
         } else {
             scope = defaultOauthScope.toString();
         }
-        size_t decodeLen;
-        UniqueBytes privateKeyDecoded(
-            kms_message_b64_to_raw(_config.privateKey.c_str(), &decodeLen));
+        std::string privateKeyDecoded = base64::decode(_config.privateKey);
 
-        if (privateKeyDecoded.get() == nullptr) {
-            uasserted(5265004, "Internal GCP KMS Error: Private key must be encoded as base64");
-        }
-
-        auto request = UniqueKmsRequest(
-            kms_gcp_request_oauth_new(_oAuthEndpoint.toString().c_str(),
-                                      _config.email.c_str(),
-                                      audience.c_str(),
-                                      scope.c_str(),
-                                      reinterpret_cast<const char*>(privateKeyDecoded.get()),
-                                      decodeLen,
-                                      _config.opts.get()));
+        auto request = UniqueKmsRequest(kms_gcp_request_oauth_new(_oAuthEndpoint.toString().c_str(),
+                                                                  _config.email.c_str(),
+                                                                  audience.c_str(),
+                                                                  scope.c_str(),
+                                                                  privateKeyDecoded.c_str(),
+                                                                  privateKeyDecoded.size(),
+                                                                  _config.opts.get()));
 
         const char* msg = kms_request_get_error(request.get());
         uassert(5265003, str::stream() << "Internal GCP KMS Error: " << msg, msg == nullptr);
@@ -166,9 +139,6 @@ public:
     void configureOauthService(HostAndPort endpoint);
 
 private:
-    void initRequest(kms_request_t* request, StringData host);
-
-private:
     // SSL Manager
     std::shared_ptr<SSLManagerInterface> _sslManager;
 
@@ -181,17 +151,6 @@ private:
     // Service for managing oauth requests and token cache
     std::unique_ptr<GCPKMSOAuthService> _oauthService;
 };
-
-void GCPKMSService::initRequest(kms_request_t* request, StringData host) {
-    // use current time
-    uassertKmsRequest(kms_request_set_date(request, nullptr));
-
-    // kms is always the name of the service
-    uassertKmsRequest(kms_request_set_service(request, "kms"));
-
-    // Set host to be the host we are targeting
-    uassertKmsRequest(kms_request_add_header_field(request, "Host", host.toString().c_str()));
-}
 
 /**
  * Extracts key data from a "key ID" string
@@ -236,17 +195,15 @@ std::vector<uint8_t> GCPKMSService::encrypt(ConstDataRange cdr, StringData kmsKe
     auto request = UniqueKmsRequest(kms_gcp_request_encrypt_new(
         _server.host().c_str(),
         bearerToken.toString().c_str(),
-        masterKey.getProjectID().toString().c_str(),
-        masterKey.getLocationID().toString().c_str(),
+        masterKey.getProjectId().toString().c_str(),
+        masterKey.getLocation().toString().c_str(),
         masterKey.getKeyRing().toString().c_str(),
-        masterKey.getKey().toString().c_str(),
+        masterKey.getKeyName().toString().c_str(),
         masterKey.getKeyVersion().has_value() ? masterKey.getKeyVersion().value().toString().c_str()
                                               : nullptr,
         reinterpret_cast<const uint8_t*>(cdr.data()),
         cdr.length(),
         _config.opts.get()));
-
-    initRequest(request.get(), _server.host());
 
     auto buffer = UniqueKmsCharBuffer(kms_request_to_string(request.get()));
     auto buffer_len = strlen(buffer.get());
@@ -285,18 +242,16 @@ SecureVector<uint8_t> GCPKMSService::decrypt(ConstDataRange cdr, BSONObj masterK
     auto gcpMasterKey = GcpMasterKey::parse(IDLParserErrorContext("gcpMasterKey"), masterKey);
     StringData bearerToken = _oauthService->getBearerToken();
 
-    auto request = UniqueKmsRequest(
-        kms_gcp_request_decrypt_new(_server.host().c_str(),
-                                    bearerToken.toString().c_str(),
-                                    gcpMasterKey.getProjectID().toString().c_str(),
-                                    gcpMasterKey.getLocationID().toString().c_str(),
-                                    gcpMasterKey.getKeyRing().toString().c_str(),
-                                    gcpMasterKey.getKey().toString().c_str(),
-                                    reinterpret_cast<const uint8_t*>(cdr.data()),
-                                    cdr.length(),
-                                    _config.opts.get()));
-
-    initRequest(request.get(), _server.host());
+    auto request =
+        UniqueKmsRequest(kms_gcp_request_decrypt_new(_server.host().c_str(),
+                                                     bearerToken.toString().c_str(),
+                                                     gcpMasterKey.getProjectId().toString().c_str(),
+                                                     gcpMasterKey.getLocation().toString().c_str(),
+                                                     gcpMasterKey.getKeyRing().toString().c_str(),
+                                                     gcpMasterKey.getKeyName().toString().c_str(),
+                                                     reinterpret_cast<const uint8_t*>(cdr.data()),
+                                                     cdr.length(),
+                                                     _config.opts.get()));
 
     auto buffer = UniqueKmsCharBuffer(kms_request_to_string(request.get()));
     auto buffer_len = strlen(buffer.get());

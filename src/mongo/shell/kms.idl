@@ -163,20 +163,14 @@ structs:
         description: "Response from GCP KMS Encrypt request"
         strict: false
         fields:
-            name:
-                type: string
-            ciphertext:
-                type: string
-            ciphertextCrc32c:
-                type: string
+            name: string
+            ciphertext: string
 
     gcpDecryptResponse:
         description: "Response from GCP KMS Decrypt request"
         strict: false
         fields:
             plaintext:
-                type: string
-            plaintextCrc32c:
                 type: string
 
     gcpMasterKey:
@@ -185,16 +179,16 @@ structs:
             provider:
                 type: string
                 default: '"gcp"'
-            key:
+            keyName:
                 type: string
             keyRing:
                 type: string
             keyVersion:
                 type: string
                 optional: true
-            locationID:
+            location:
                 type: string
-            projectID:
+            projectId:
                 type: string
             endpoint:
                 type: string

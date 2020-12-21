@@ -64,6 +64,7 @@ structs:
             type: string
             optional: true
 
+    # Documented here: https://cloud.google.com/apis/design/errors#http_mapping
     gcpKMSError:
         description: "GCP KMS Error"
         strict: false
@@ -174,7 +175,7 @@ structs:
                 type: string
 
     gcpMasterKey:
-        description: "AWS KMS Key Store Description"
+        description: "GCP KMS Key Store Description"
         fields:
             provider:
                 type: string

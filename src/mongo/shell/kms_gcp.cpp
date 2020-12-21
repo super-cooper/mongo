@@ -32,7 +32,6 @@
 #include "mongo/platform/basic.h"
 
 #include <fmt/format.h>
-#include <kms_message/kms_b64.h>
 #include <kms_message/kms_gcp_request.h>
 #include <kms_message/kms_message.h>
 
@@ -233,7 +232,7 @@ std::vector<uint8_t> GCPKMSService::encrypt(ConstDataRange cdr, StringData kmsKe
 
     auto gcpResponce = GcpEncryptResponse::parse(IDLParserErrorContext("gcpEncryptResponse"), obj);
 
-    auto blobStr = base64::decode(gcpResponce.getCiphertext().toString());
+    auto blobStr = base64::decode(gcpResponce.getCiphertext());
 
     return kmsResponseToVector(blobStr);
 }
@@ -280,7 +279,7 @@ SecureVector<uint8_t> GCPKMSService::decrypt(ConstDataRange cdr, BSONObj masterK
 
     auto gcpResponce = GcpDecryptResponse::parse(IDLParserErrorContext("gcpEncryptResponse"), obj);
 
-    auto blobStr = base64::decode(gcpResponce.getPlaintext().toString());
+    auto blobStr = base64::decode(gcpResponce.getPlaintext());
 
     return kmsResponseToSecureVector(blobStr);
 }

@@ -14,6 +14,8 @@ const x509_options = {
     sslCAFile: CA_CERT
 };
 
+jsTestLog(x509_options);
+
 const randomAlgorithm = "AEAD_AES_256_CBC_HMAC_SHA_512-Random";
 
 const conn = MongoRunner.runMongod(x509_options);
@@ -26,7 +28,13 @@ function runKMS(mock_kms, func) {
     const gcpKMS = {
         email: "access@mongodb.com",
         endpoint: mock_kms.getURL(),
-        privateKey: "secret",
+        // "secret" encoded in base64
+        privateKey:
+            "MIIBOgIBAAJBAMvDlRJYwlmmu/s4FdwSRFyQmrno1kaRlvvsz6BG5EUAAQyzKDaaDN5j+sk7OYcPmMvJDhJYvcEo1d7+ZTiBzEcCAwEA" +
+            "AQJBAIvkkTnxWi02vaRyEv/uQqTSWof8hPAaEHCRWtKNGTcM2PsmsMX1zQuLbK4rHNnqgCbjCjBUR/5usWRwSxHy5HECIQD4J88vHffW" +
+            "LMMBkxF4l9yUdV34M7ghsnxmxd8E6guK0wIhANI0iTwmlNZWdIk68Y6QUomGOjGgmJ6XQV3//7XdtGg9AiA3du5f4ZrbS/XqDC0Dfy3W" +
+            "IMV4DFdDcNlNPzyxpH4f8QIgEbLWszfUZE+XNE7AM+625Flm4PLSpte5az64uwlVvUkCIHVdtaKcYU+G21NZZlv3JoxHUGnF6IsL/42P" +
+            "oYbL7FyQ",
     };
 
     const clientSideFLEOptions = {
@@ -48,7 +56,7 @@ function runKMS(mock_kms, func) {
 }
 
 function testBadEncryptResult() {
-    const mock_kms = new MockKMSServerGCP(FAULT_ENCRYPT, false);
+    const mock_kms = new MockKMSServerAWS(FAULT_ENCRYPT, false);
 
     runKMS(mock_kms, (shell) => {
         const keyVault = shell.getKeyVault();
@@ -65,7 +73,7 @@ function testBadEncryptResult() {
 testBadEncryptResult();
 
 function testBadEncryptError() {
-    const mock_kms = new MockKMSServerGCP(FAULT_ENCRYPT_CORRECT_FORMAT, false);
+    const mock_kms = new MockKMSServerAWS(FAULT_ENCRYPT_CORRECT_FORMAT, false);
 
     runKMS(mock_kms, (shell) => {
         const keyVault = shell.getKeyVault();
@@ -81,7 +89,7 @@ function testBadEncryptError() {
 testBadEncryptError();
 
 function testBadDecryptResult() {
-    const mock_kms = new MockKMSServerGCP(FAULT_DECRYPT, false);
+    const mock_kms = new MockKMSServerAWS(FAULT_DECRYPT, false);
 
     runKMS(mock_kms, (shell) => {
         const keyVault = shell.getKeyVault();
@@ -99,7 +107,7 @@ function testBadDecryptResult() {
 testBadDecryptResult();
 
 function testBadDecryptKeyResult() {
-    const mock_kms = new MockKMSServerGCP(FAULT_DECRYPT_WRONG_KEY, true);
+    const mock_kms = new MockKMSServerAWS(FAULT_DECRYPT_WRONG_KEY, true);
 
     runKMS(mock_kms, (shell, cleanCacheShell) => {
         const keyVault = shell.getKeyVault();
@@ -123,7 +131,7 @@ function testBadDecryptKeyResult() {
 testBadDecryptKeyResult();
 
 function testBadDecryptError() {
-    const mock_kms = new MockKMSServerGCP(FAULT_DECRYPT_CORRECT_FORMAT, false);
+    const mock_kms = new MockKMSServerAWS(FAULT_DECRYPT_CORRECT_FORMAT, false);
 
     runKMS(mock_kms, (shell) => {
         const keyVault = shell.getKeyVault();

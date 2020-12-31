@@ -36,12 +36,15 @@
 #include "mongo/bson/json.h"
 #include "mongo/shell/kms.h"
 #include "mongo/shell/kms_gen.h"
+#include "mongo/util/debugger.h"
 #include "mongo/util/text.h"
 
 namespace mongo {
 
 void KMSNetworkConnection::connect(const HostAndPort& host) {
     SockAddr server(host.host().c_str(), host.port(), AF_UNSPEC);
+
+    std::cout << "MADE SERVER OBJECT: " << host.toString() << std::endl;
 
     uassert(51136,
             str::stream() << "KMS server address " << host.host() << " is invalid.",
@@ -50,12 +53,15 @@ void KMSNetworkConnection::connect(const HostAndPort& host) {
     int attempt = 0;
     bool connected = false;
     while (!connected && attempt < 20) {
+        std::cout << "GONNA TRY TO CONNECT" << std::endl;
         connected = _socket->connect(server);
         attempt++;
     }
+    std::cout << "CONNECTED SUCCESSFULLY" << std::endl;
     uassert(
         51137, str::stream() << "Could not connect to KMS server " << server.toString(), connected);
 
+    std::cout << "SECURING SOCKET" << std::endl;
     uassert(51138,
             str::stream() << "Failed to perform SSL handshake with the KMS server "
                           << host.toString(),
@@ -89,6 +95,8 @@ UniqueKmsResponse KMSNetworkConnection::sendRequest(ConstDataRange request) {
 UniqueKmsResponse KMSNetworkConnection::makeOneRequest(const HostAndPort& host,
                                                        ConstDataRange request) {
     connect(host);
+
+    std::cout << "MADE CONNECTION" << std::endl;
 
     auto resp = sendRequest(request);
 
@@ -154,7 +162,10 @@ void KMSOAuthService::makeBearerTokenRequest() {
     auto buffer = UniqueKmsCharBuffer(kms_request_to_string(request.get()));
     auto buffer_len = strlen(buffer.get());
 
+    std::cout << "REQUEST STR: " << std::string(buffer.get(), buffer_len) << std::endl;
+
     KMSNetworkConnection connection(_sslManager.get());
+    std::cout << "MADE CONNECTION OBJECT" << std::endl;
     auto response =
         connection.makeOneRequest(_oAuthEndpoint, ConstDataRange(buffer.get(), buffer_len));
 

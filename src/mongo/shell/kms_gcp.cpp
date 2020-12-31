@@ -100,9 +100,14 @@ protected:
         } else {
             scope = defaultOauthScope.toString();
         }
+        std::cout << "OAUTH REQUEST " << audience << " " << scope << std::endl;
+        uassert(5365009,
+                str::stream() << "Internal GCP KMS Error: Private key not encoded in base64.",
+                base64::validate(_config.privateKey));
         std::string privateKeyDecoded = base64::decode(_config.privateKey);
+        std::cout << "FINISHED DECODING: " << _config.privateKey << std::endl;
 
-        auto request = UniqueKmsRequest(kms_gcp_request_oauth_new(_oAuthEndpoint.toString().c_str(),
+        auto request = UniqueKmsRequest(kms_gcp_request_oauth_new(_oAuthEndpoint.host().c_str(),
                                                                   _config.email.c_str(),
                                                                   audience.c_str(),
                                                                   scope.c_str(),
@@ -110,6 +115,7 @@ protected:
                                                                   privateKeyDecoded.size(),
                                                                   _config.opts.get()));
 
+        std::cout << "FETCHED OAUTH REQUEST" << std::endl;
         const char* msg = kms_request_get_error(request.get());
         uassert(5265003, str::stream() << "Internal GCP KMS Error: " << msg, msg == nullptr);
 
@@ -285,6 +291,7 @@ SecureVector<uint8_t> GCPKMSService::decrypt(ConstDataRange cdr, BSONObj masterK
 }
 
 BSONObj GCPKMSService::encryptDataKey(ConstDataRange cdr, StringData keyId) {
+    std::cout << "ENCRYPT DATA KEY" << std::endl;
     auto dataKey = encrypt(cdr, keyId);
     BSONObj keyData = parseKMSKeyId(keyId);
 
@@ -294,6 +301,7 @@ BSONObj GCPKMSService::encryptDataKey(ConstDataRange cdr, StringData keyId) {
     keyAndMaterial.setKeyMaterial(dataKey);
     keyAndMaterial.setMasterKey(masterKey);
 
+    std::cout << "ENCRYPTED" << std::endl;
     return keyAndMaterial.toBSON();
 }
 
@@ -303,22 +311,24 @@ std::unique_ptr<KMSService> GCPKMSService::create(const GcpKMS& config) {
     SSLParams params;
     getSSLParamsForNetworkKMS(&params);
 
+    gcpKMS->_sslManager = SSLManagerInterface::create(params, false);
+
     // Leave the CA file empty so we default to system CA but for local testing allow it to inherit
     // the CA file.
     if (config.getEndpoint().has_value()) {
         params.sslCAFile = sslGlobalParams.sslCAFile;
+        // for OAuth, we need to cut out the https:// from the endpoint URL
+        gcpKMS->configureOauthService(parseUrl(config.getEndpoint().get()));
+    } else {
+        gcpKMS->configureOauthService(HostAndPort(defaultOauthEndpoint.toString(), 443));
     }
-    gcpKMS->_server = parseUrl(config.getEndpoint().value_or(gcpKMSEndpoint));
 
-    gcpKMS->_sslManager = SSLManagerInterface::create(params, false);
+    gcpKMS->_server = parseUrl(config.getEndpoint().value_or(gcpKMSEndpoint));
 
     gcpKMS->_config.email = config.getEmail().toString();
 
     gcpKMS->_config.opts = UniqueKmsRequestOpts(kms_request_opt_new());
     kms_request_opt_set_provider(gcpKMS->_config.opts.get(), KMS_REQUEST_PROVIDER_GCP);
-
-    gcpKMS->configureOauthService(
-        HostAndPort(config.getEndpoint().value_or(defaultOauthEndpoint).toString(), 443));
 
     gcpKMS->_config.privateKey = config.getPrivateKey().toString();
 

@@ -52,6 +52,7 @@ class KmsHandlerBase(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Serve a Test GET request."""
+        print("Received GET: " + self.path)
         parts = urllib.parse.urlsplit(self.path)
         path = parts[2]
 
@@ -68,6 +69,7 @@ class KmsHandlerBase(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Serve a POST request."""
+        print("Received POST: " + self.path)
         parts = urllib.parse.urlsplit(self.path)
         path = parts[2]
 
@@ -161,7 +163,7 @@ def run(port, cert_file, ca_file, handler_class, server_class=http.server.HTTPSe
                                    certfile=cert_file,
                                    ca_certs=ca_file, server_side=True)
 
-    print("Mock KMS Web Server Listening on %s" % (str(server_address)))
+    print(f"Mock KMS Web Server Listening on {str(server_address)}")
 
     httpd.serve_forever()
 

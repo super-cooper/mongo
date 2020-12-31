@@ -14,6 +14,8 @@ const x509_options = {
     sslCAFile: CA_CERT
 };
 
+jsTestLog(x509_options);
+
 const randomAlgorithm = "AEAD_AES_256_CBC_HMAC_SHA_512-Random";
 
 const conn = MongoRunner.runMongod(x509_options);

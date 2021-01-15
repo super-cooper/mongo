@@ -38,6 +38,7 @@ enums:
         type: string
         values:
             aws: "aws"
+            azure: "azure"
             gcp: "gcp"
             local: "local"
 
@@ -61,6 +62,24 @@ structs:
             type: string
             optional: true
           url:
+            type: string
+            optional: true
+
+    azureKMSError:
+        description: "Azure KMS Error"
+        strict: false
+        fields:
+          code: string
+          message: string
+
+    # Options passed to Mongo() javascript constructor
+    azureKMS:
+        description: "Azure KMS config"
+        fields:
+          tenantId: string
+          clientId: string
+          clientSecret: string
+          identityPlatformEndpoint:
             type: string
             optional: true
 
@@ -96,6 +115,9 @@ structs:
         aws:
           type: awsKMS
           optional: true
+        azure:
+            type: azureKMS
+            optional: true
         gcp:
             type: gcpKMS
             optional: true
@@ -159,6 +181,38 @@ structs:
             type: bindata_generic
           masterKey:
             type: awsMasterKey
+
+    azureEncryptResponse:
+        description: "Response from Azure KMS Encrypt request"
+        strict: false
+        fields:
+          kid: string
+          value: string
+
+    azureDecryptResponse:
+        description: "Response from Azure KMS Decrypt request"
+        strict: false
+        fields:
+          kid: string
+          value: string
+
+    azureMasterKey:
+        description: "Azure KMS Key Store Description"
+        fields:
+          provider:
+            type: string
+            default: '"azure"'
+          keyName: string
+          keyVersion:
+            type: string
+            optional: true
+          keyVaultEndpoint: string
+
+    azureMasterKeyAndMaterial:
+        description: "Azure KMS Key Material Description"
+        fields:
+          keyMaterial: bindata_generic
+          masterKey: azureMasterKey
 
     gcpEncryptResponse:
         description: "Response from GCP KMS Encrypt request"

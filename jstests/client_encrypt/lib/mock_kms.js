@@ -168,3 +168,10 @@ class MockKMSServerGCP extends MockKMSServerAWS {
         this.web_server_py = "jstests/client_encrypt/lib/kms_http_server_gcp.py";
     }
 }
+
+class MockKMSServerAzure extends MockKMSServerAWS {
+    constructor(fault_type, disableFaultsOnStartup) {
+        super(fault_type, disableFaultsOnStartup);
+        this.web_server_py = "jstests/client_encrypt/lib/kms_http_server_azure.py";
+    }
+}
